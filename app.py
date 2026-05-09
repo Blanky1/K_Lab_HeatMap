@@ -7,20 +7,17 @@ import matplotlib.pyplot as plt
 
 st.title("Drug Combination Heatmap")
 
-st.markdown("""
-**Expected file format** (CSV, TXT, or XLSX):
-
-| Drug B \\ Drug A | 0 | 1.25 | 2.5 | ... |
-|---|---|---|---|---|
-| (optional numbering row) | 1 | 2 | 3 | ... |
-| 0 | val | val | val | ... |
-| 1.25 | val | val | val | ... |
-
-- Column 1: Drug B concentration (numeric)
-- Column 2: Letter label (A, B, C …) — optional
-- Remaining columns: data values; column headers = Drug A concentrations
-- An optional row where all values are sequential integers (1, 2, 3 …) is skipped automatically.
-""")
+st.caption("Expected format (CSV, TXT, or XLSX):")
+st.dataframe(
+    {
+        "DrugB \\ DrugA": [0, 1.25, 2.5],
+        "0":    [13.4, 12.9, 6.9],
+        "1.25": [15.4, 10.4, 6.2],
+        "2.5":  [16.7,  8.2, 7.6],
+        "...":  ["...", "...", "..."],
+    },
+    hide_index=True,
+)
 
 uploaded = st.file_uploader("Upload data file", type=["csv", "txt", "xlsx"])
 
