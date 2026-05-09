@@ -1,5 +1,4 @@
 import io
-import os
 import pandas as pd
 import streamlit as st
 import seaborn as sns
@@ -19,26 +18,21 @@ st.dataframe(
     hide_index=True,
 )
 
-uploaded = st.file_uploader("Upload data file", type=["csv", "txt", "xlsx"])
+tab_upload, tab_paste = st.tabs(["Upload File", "Paste from Excel"])
+
+with tab_upload:
+    uploaded = st.file_uploader("Upload file (CSV, TXT, or XLSX):", type=["csv", "txt", "xlsx"])
+
+with tab_paste:
+    pasted = st.text_area("Paste copied Excel cells (Ctrl+C → Ctrl+V):", height=200, placeholder="Paste your Excel selection here...")
 
 
 def parse_data(raw: pd.DataFrame) -> pd.DataFrame:
-    """
-    Takes a raw DataFrame with the structure exported from Excel/CSV:
-      col0 = Drug B concentrations (numeric), col1 = letter labels,
-      col2+ = data values; column headers col2+ = Drug A concentrations.
-    Returns a clean DataFrame indexed by Drug B concs, columns = Drug A concs.
-    """
-    # Drug A concentrations come from column headers (skip first two label cols)
     druga_concs = pd.to_numeric(raw.columns[2:], errors="coerce")
-
-    # Keep only rows where col0 is a valid number (Drug B concentration rows)
     drugb_numeric = pd.to_numeric(raw.iloc[:, 0], errors="coerce")
     data_rows = raw[drugb_numeric.notna()].copy()
     drugb_values = drugb_numeric[drugb_numeric.notna()].values
-
     data = data_rows.iloc[:, 2:].astype(float).values
-
     df_out = pd.DataFrame(data, index=drugb_values, columns=druga_concs.tolist())
     df_out.index.name = "Drug B Conc"
     df_out.columns.name = "Drug A Conc"
@@ -51,6 +45,12 @@ def load_file(f, name: str) -> pd.DataFrame:
     else:
         content = f.read().decode("utf-8")
         raw = pd.read_csv(io.StringIO(content))
+    return parse_data(raw)
+
+
+def parse_pasted(text: str) -> pd.DataFrame:
+    sep = "\t" if "\t" in text else ","
+    raw = pd.read_csv(io.StringIO(text), sep=sep, header=0)
     return parse_data(raw)
 
 
@@ -71,12 +71,11 @@ if uploaded is not None:
         st.pyplot(make_heatmap(df))
     except Exception as e:
         st.error(f"Could not parse file: {e}")
-else:
-    sample = os.path.join(os.path.dirname(__file__), "your_file.csv")
-    if os.path.exists(sample):
-        st.info("No file uploaded — showing sample data from `your_file.csv`.")
-        with open(sample, "rb") as f:
-            df = load_file(f, "your_file.csv")
-        st.subheader("Sample Data")
+elif pasted.strip():
+    try:
+        df = parse_pasted(pasted)
+        st.subheader("Parsed Data")
         st.dataframe(df)
         st.pyplot(make_heatmap(df))
+    except Exception as e:
+        st.error(f"Could not parse data: {e}")
